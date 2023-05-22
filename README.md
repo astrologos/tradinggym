@@ -33,7 +33,7 @@ git clone https://github.com/your-username/crypto-trading-gym.git
 ```
 
 ## Usage
-
+See more detailed examples in /examples/.
 Here's an example of how to use the CryptoEnvironment:
 
 ```python

@@ -12,7 +12,7 @@ CryptoEnvironment is a gym environment for cryptocurrency trading. It provides a
     - Trade fees
     - Slippage
     - Order execution fraction
-    - Reward function.
+    - Reward function
 - Uses any trading data including custom indicators from a provided DataFrame.
 - Provides observation and action spaces compatible with Gym.
 - Easy integration with stable-baselines3.

@@ -1,34 +1,38 @@
-import gym
+from gym import Env
+from gym import spaces
 import numpy as np
 import sys
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
-from gym import spaces
 
-class CryptoEnvironment(gym.Env):
+class CryptoEnvironment(Env):
     def __init__(self, initial_value=10000, observations=None, max_steps=100, random_split=True, window_size=5, trade_fee=0.0045, slippage = 0.005, order_fraction = 0.2, reward_function = None, price_column = 'Close'):
         """
-        Gym environment for cryptocurrency trading.
+        Initializes the CryptoEnvironment object.
 
-        Parameters:
-        - initial_value (float): Initial balance for the agent.
-        - observations (DataFrame): DataFrame containing observation data.
-        - max_steps (int): Maximum number of steps to take in the environment.
-        - random_split (float): Asset split is random after each reset() 
-        - window_size (int): Window size to feed the model.
-        - trade_fee (float): Fees for each trade on (0,1).
-        - slippage (float): Maximum slippage coefficient.
-        - order_fraction (float): Ratio of maximum possible order to execute on (0,1).
-        - reward_function (function): Custom reward function.
-        - price_column (str): Name of the column containing price data.
+        Args:
+            initial_value (float): Initial balance.
+            observations (pd.DataFrame): Observation dataframe containing price data.
+            max_steps (int): Maximum number of steps to take.
+            random_split (bool): Flag indicating whether to use random split for the initial balance.
+            window_size (int): Window size to feed the model.
+            trade_fee (float): Fees for each trade.
+            slippage (float): Maximum slippage coefficient.
+            order_fraction (float): Ratio of maximum possible order to execute.
+            reward_function (function): Custom reward function.
+            price_column (str): Name of the column containing price data.
+
+        Raises:
+            ValueError: If observation data is missing or not longer than double the window size.
         """
+
         self.DEBUG = False
 
         if observations is None:
             import requests
             observations = pd.DataFrame(requests.get('https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=1000').json()['prices'], columns=['TimeStamp','Close'])
-        
+
         super(CryptoEnvironment, self).__init__()
         self.initial_value = initial_value  # Initial balance
         self.observations = observations  # Observation dataframe, should contain price_column
@@ -46,7 +50,7 @@ class CryptoEnvironment(gym.Env):
 
         if self.observations is None:
             raise ValueError("Observation data is missing.")
-        
+
         if len(self.observations) <= 2*self.window_size:
             raise ValueError("Observation data must longer than double than the window size.")
 
@@ -63,8 +67,12 @@ class CryptoEnvironment(gym.Env):
 
     def flush_print(self, s):
         """
-        Simple utility to flush print statements.
+        Prints the given string if the DEBUG flag is True.
+
+        Args:
+            s (str): String to be printed.
         """
+
         if self.DEBUG:
             print(s)
             sys.stdout.flush()
@@ -75,11 +83,18 @@ class CryptoEnvironment(gym.Env):
     # Reset the state of the environment
     def reset(self, start_index = None):
         """
-        Reset the state of the environment
+        Resets the state of the environment.
+
+        Args:
+            start_index (int): Starting index for the environment.
 
         Returns:
-        - observation (ndarray): The initial observation.
+            np.ndarray: Initial observation after reset.
+
+        Raises:
+            ValueError: If the start index is out of bounds.
         """
+
         if self.random_split:
             self.balance = self.random_split * self.initial_value
             current_price = self.observations.iloc[self.current_step][self.price_column]
@@ -97,17 +112,15 @@ class CryptoEnvironment(gym.Env):
 
     def step(self, action):
         """
-        Take a step in the environment.
+        Performs a step in the environment given an action.
 
-        Parameters:
-        - action (int): The action to take.
+        Args:
+            action (int): Action to be taken.
 
         Returns:
-        - observation (ndarray): The new observation after the step.
-        - reward (float): The reward for the action.
-        - done (bool): Indicates if the episode is done.
-        - info (dict): Additional information.
+            tuple: Tuple containing the next observation, reward, done flag, and additional info.
         """
+
         current_price = self.observations.iloc[self.current_step][self.price_column]
         total_fees = self.trade_fee + np.random.uniform(-self.slippage, self.slippage)
         if action == 0:  # Buy
@@ -132,11 +145,12 @@ class CryptoEnvironment(gym.Env):
 
     def _get_observation(self):
         """
-        Get the current observation.
+        Obtains the current observation from the environment.
 
         Returns:
-        - observation (ndarray): The current observation.
+            np.ndarray: Current observation.
         """
+
         start_index = self.current_step - self.window_size
         end_index = self.current_step
         window_data = self.observations.iloc[start_index-self.window_size:end_index].drop(self.price_column, axis = 1)  # Exclude the price column
@@ -150,11 +164,15 @@ class CryptoEnvironment(gym.Env):
 
     def _get_reward(self,action):
         """
-        Get the reward for the current step.
+        Calculates the reward for the given action.
+
+        Args:
+            action (int): Action for which to calculate the reward.
 
         Returns:
-        - reward (float): The reward for the current step.
+            float: Reward value.
         """
+
         total_fees = self.trade_fee + np.random.uniform(-self.slippage, self.slippage)
         current_price = self.observations.iloc[self.current_step][self.price_column]
         prev_price = self.observations.iloc[self.current_step - 1][self.price_column]
@@ -173,19 +191,27 @@ class CryptoEnvironment(gym.Env):
 
     def evaluate(self, frame_length, start_index = None, render=True, model=None, deterministic=True, marker_size=20, initial_value=10000, initial_shares=0, verbose = 1, figsize=(14,6)):
         """
-        Evaluate the trained model in the environment.
+        Performs evaluation of the environment using a trained model.
 
-        Parameters:
-        - frame_length (int): Number of steps to evaluate.
-        - render (bool): Indicates if the evaluation should be visualized.
-        - model (object): The trained model to use for action selection.
-        - deterministic (bool): Indicates if the model's actions should be deterministic.
-        - marker_size (int): Size of the markers in the visualization.
-        - initial_value (float): Initial balance for the evaluation.
-        - initial_shares (float): Initial shares for the evaluation.
-        - verbose (int): Level of verbosity for evaluation metrics.
-        - figsize (tuple): Figure size for the visualization.
+        Args:
+            frame_length (int): Length of the evaluation frame.
+            start_index (int): Starting index for evaluation.
+            render (bool): Flag indicating whether to render the evaluation plot.
+            model: Trained model for making predictions.
+            deterministic (bool): Flag indicating whether to use deterministic predictions.
+            marker_size (int): Size of the markers in the plot.
+            initial_value (float): Initial balance for evaluation.
+            initial_shares (float): Initial fractional shares for evaluation.
+            verbose (int): Verbosity level for printing evaluation metrics.
+            figsize (tuple): Figure size for the evaluation plot.
+
+        Returns:
+            float: Final value of the portfolio.
+
+        Raises:
+            ValueError: If the start index is out of bounds.
         """
+
         initial_value = self.balance 
         initial_shares = self.shares
         initial_step = self.current_step 

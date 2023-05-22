@@ -8,7 +8,7 @@ CryptoEnvironment is a gym environment for cryptocurrency trading. It provides a
 - Customizable initial balance, random initial asset split, maximum steps, trade fees, slippage, order fraction, and reward function.
 - Uses any trading data including custom indicators from a provided DataFrame.
 - Provides observation and action spaces compatible with Gym.
-- Easy integration with stable-baselines3
+- Easy integration with stable-baselines3.
 - Supports one-line evaluation of trained models with visualization options.
 
 

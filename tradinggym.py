@@ -308,3 +308,5 @@ class CryptoEnvironment(Env):
             print("Cumulative reward:   " + format(sum(rewards),'.2f'))
             print("Max reward:          " + format(max(rewards),'.2f'))
             print("Min reward:          " + format(min(rewards),'.2f'))
+        
+        return initial_value, final_value, profit, return_rate, rewards

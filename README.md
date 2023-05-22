@@ -33,7 +33,8 @@ pip install -r requirements.txt
 ```
 
 ## Usage
-See more detailed examples in /examples/.
+See more detailed examples in `/examples/`.
+
 Here's an example of how to use the CryptoEnvironment:
 
 ```python

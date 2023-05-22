@@ -14,6 +14,11 @@ CryptoEnvironment is a gym environment for cryptocurrency trading. It provides a
 
 ## Installation
 
+Clone the repository:
+```bash
+git clone https://github.com/your-username/crypto-trading-gym.git
+```
+
 To use the CryptoEnvironment, you need to have the following dependencies installed:
 
 - gym==0.21.0
@@ -25,11 +30,6 @@ To use the CryptoEnvironment, you need to have the following dependencies instal
 You can install these dependencies using pip:
 ```bash
 pip install -r requirements.txt
-```
-
-Clone the repository:
-```bash
-git clone https://github.com/your-username/crypto-trading-gym.git
 ```
 
 ## Usage

@@ -1,6 +1,6 @@
 # CryptoEnvironment
 
-CryptoEnvironment is a gym environment for cryptocurrency trading. It provides a simulation environment for training and evaluating trading strategies.
+CryptoEnvironment is a gym environment for cryptocurrency trading. It provides a simulation environment for training and evaluating reinforcement learning agents.
 
 ## Features
 

@@ -15,7 +15,7 @@ class CryptoEnvironment(Env):
             initial_value (float): Initial balance.
             observations (pd.DataFrame): Observation dataframe containing price data.
             max_steps (int): Maximum number of steps to take.
-            random_split (bool): Flag indicating whether to use random split for the initial balance.
+            random_split (bool): Flag indicating whether to force the agent to take an initial random market position
             window_size (int): Window size to feed the model.
             trade_fee (float): Fees for each trade.
             slippage (float): Maximum slippage coefficient.
@@ -31,15 +31,15 @@ class CryptoEnvironment(Env):
 
         if observations is None:
             import requests
-            observations = pd.DataFrame(requests.get('https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=1000').json()['prices'], columns=['TimeStamp','Close'])
+            observations = pd.DataFrame(requests.get('https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=100').json()['prices'], columns=['TimeStamp','Close'])
 
         super(CryptoEnvironment, self).__init__()
-        self.initial_value = initial_value  # Initial balance
+        self.initial_value = initial_value  # Initial value
         self.observations = observations  # Observation dataframe, should contain price_column
         self.window_size = window_size  # Window size to feed model
         self.balance = initial_value  # Balance = initial_value
         self.shares = 0.0  # Fractional shares
-        self.random_split = random_split # Random split 
+        self.random_split = random_split # Force the agent to take a random initial market position 
         self.max_steps = max_steps  # Max number of steps to take
         self.current_step = np.random.randint(1 + 2*self.window_size, len(self.observations) - self.max_steps - 2*(self.window_size + 1))  # Initialize current step randomly
         self.trade_fee = trade_fee  # Fees for each trade
@@ -80,6 +80,17 @@ class CryptoEnvironment(Env):
 
     print = flush_print
 
+    def set_DEBUG(self, debug):
+        """
+        Sets the self.DEBUG state
+
+        Args:
+            debug (bool): State to change self.DEBUG to.
+        """
+        if debug:
+            self.DEBUG=True
+        else: self.DEBUG=False
+
     # Reset the state of the environment
     def reset(self, start_index = None):
         """
@@ -96,12 +107,19 @@ class CryptoEnvironment(Env):
         """
 
         if self.random_split:
-            self.balance = self.random_split * self.initial_value
+            # Set vals to zero so that portfolio value is calculated solely on shares value,
+            # this allows us to make up the difference in the balance so that portfolio value equals initial balance
+            self.balance = 0
+            self.shares = 0
+            # Split is percentage of assets to be owned as initial shares 
+            split = np.random.random()
             current_price = self.observations.iloc[self.current_step][self.price_column]
-            self.shares = (self.initial_value - self.balance)/ (current_price)
+            self.shares = (self.initial_value*split) / current_price
+            self.balance = self.initial_value - self.calculate_portfolio_value(current_price=current_price)
         else:
             self.balance = self.initial_value  # Reset balance
             self.shares = 0.0  # Reset shares
+
         if start_index is None:
             self.current_step = np.random.randint(1 + 2*self.window_size, len(self.observations) - self.max_steps - 2*(self.window_size + 1))  # Initialize current step randomly
         elif start_index > 1 + 2*self.window_size or start_index < len(self.observations) - self.window_size - self.max_steps:
@@ -189,7 +207,12 @@ class CryptoEnvironment(Env):
 
         return percent_diff 
 
-    def evaluate(self, frame_length, start_index = None, render=True, model=None, deterministic=True, marker_size=20, initial_value=10000, initial_shares=0, verbose = 1, figsize=(14,6)):
+    def calculate_portfolio_value(self, current_price):
+        shares_value = current_price*self.shares
+        trading_fee = shares_value * self.trade_fee
+        return self.balance + shares_value - trading_fee
+
+    def evaluate(self, frame_length, start_index = None, render=True, model=None, deterministic=True, marker_size=20, init_balance=10000, init_shares=0, verbose = 1, figsize=(14,6)):
         """
         Performs evaluation of the environment using a trained model.
 
@@ -200,8 +223,8 @@ class CryptoEnvironment(Env):
             model: Trained model for making predictions.
             deterministic (bool): Flag indicating whether to use deterministic predictions.
             marker_size (int): Size of the markers in the plot.
-            initial_value (float): Initial balance for evaluation.
-            initial_shares (float): Initial fractional shares for evaluation.
+            init_balance (float): Initial balance for evaluation.
+            init_shares (float): Initial fractional shares for evaluation.
             verbose (int): Verbosity level for printing evaluation metrics.
             figsize (tuple): Figure size for the evaluation plot.
 
@@ -212,12 +235,31 @@ class CryptoEnvironment(Env):
             ValueError: If the start index is out of bounds.
         """
 
-        initial_value = self.balance 
-        initial_shares = self.shares
-        initial_step = self.current_step 
+        prev_value = self.balance 
+        prev_shares = self.shares
+        prev_step = self.current_step 
 
         # Reset the environment for evaluation
         self.reset()
+        t0balance = init_balance
+        t0shares = init_shares
+        if self.random_split:
+            # Initialize vals to zero so that portfolio value is calculated solely on shares value,
+            # this allows us to make up the different in the balance so that portfolio value equals initial balance
+            self.balance = 0
+            self.shares = 0
+            # Split is percentage of assets to be owned as initial shares 
+            split = np.random.random()
+            current_price = self.observations.iloc[self.current_step][self.price_column]
+            self.shares = (init_balance*split) / current_price
+            self.balance = init_balance - self.calculate_portfolio_value(current_price=current_price)
+        else:
+            self.balance = init_balance  # Reset balance
+            self.shares = init_shares  # Reset shares
+
+        t0balance = self.balance
+        t0shares = self.shares
+        
 
         # Randomly select a subset of the data for evaluation
         if start_index is None:
@@ -241,6 +283,7 @@ class CryptoEnvironment(Env):
             axs[0].set_ylabel('Price')
             axs[0].grid(visible=True, alpha = 0.5)
 
+        
         profit = 0.0  # Accumulated profit
         observation = self._get_observation()  # Get the initial observation
         current_price = None
@@ -258,7 +301,7 @@ class CryptoEnvironment(Env):
             # Accumulate the rewards
             current_price = row[self.price_column]
             rewards.append(self._get_reward(action))
-            portfolio_vals.append(self.balance + ((1 - self.trade_fee)*current_price*self.shares))
+            portfolio_vals.append(self.calculate_portfolio_value(current_price=current_price))
 
             # Price subplot
             if render:
@@ -271,12 +314,6 @@ class CryptoEnvironment(Env):
 
             # Update the observation for the next step
             observation = next_observation
-
-
-        final_balance = self.balance 
-        profit = (final_balance + (current_price*self.shares)) - self.initial_value
-        return_rate = ((self.initial_value + profit) / self.initial_value) - 1
-        final_value = initial_value + profit
 
         # Portfolio value subplot
         if render: 
@@ -293,20 +330,22 @@ class CryptoEnvironment(Env):
         if render:
             plt.show()
 
-        # Restore the environment state to its original values
-        self.balance = initial_value
-        self.shares = initial_shares
-        self.current_step = initial_step
-
         # Print evaluation metrics
         if verbose>0:
             print("Evaluation Metrics:  ")
-            print("Initial balance:     " + format(initial_value,'.2f'))
-            print("Final value:         " + format(final_value, '.2f'))
-            print("Profit:              " + format(profit,'.2f'))
-            print("Return Rate:         " + format(return_rate,'.2%'))
-            print("Cumulative reward:   " + format(sum(rewards),'.2f'))
+            print('Initial value:       ' + format(portfolio_vals[0]))
+            print('Initial balance:     ' + format(t0balance, '.2f'))
+            print('Initial shares:      ' + format(t0shares, '.2f'))
+            print('Initial split:       ' + format(1-split,'.2f'))
+            print("Final value:         " + format(portfolio_vals[-1], '.2f'))
+            print("Profit:              " + format(portfolio_vals[-1]-portfolio_vals[0],'.2f'))
+            print("Return Rate:         " + format((portfolio_vals[-1]/portfolio_vals[0] - 1 ),'.2%'))
+            print("Avg reward:          " + format(sum(rewards)/len(rewards),'.2f'))
             print("Max reward:          " + format(max(rewards),'.2f'))
             print("Min reward:          " + format(min(rewards),'.2f'))
-        
-        return initial_value, final_value, profit, return_rate, rewards
+            print("Cumulative reward:   " + format(sum(rewards),'.2f'))
+
+        # Restore the environment state to its original values
+        self.balance = prev_value
+        self.shares = prev_shares
+        self.current_step = prev_step

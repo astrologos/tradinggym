@@ -105,7 +105,16 @@ class CryptoEnvironment(Env):
         Raises:
             ValueError: If the start index is out of bounds.
         """
+        
+        # Randomly initialize start index
+        if start_index is None:
+            self.current_step = np.random.randint(1 + 2*self.window_size, len(self.observations) - self.max_steps - 2*(self.window_size + 1))  # Initialize current step randomly
+        elif start_index > 1 + 2*self.window_size or start_index < len(self.observations) - self.window_size - self.max_steps:
+            raise ValueError('Initial step must be between (1 + 2*window_size, len(observations) - window_size - max_steps). \n' + 
+            'It is not advised to evaluate the model near the bounds of the observation data.')
+        else: self.current_step = start_index
 
+        # Randomly initialize portfolio split
         if self.random_split:
             # Set vals to zero so that portfolio value is calculated solely on shares value,
             # this allows us to make up the difference in the balance so that portfolio value equals initial balance
@@ -120,12 +129,6 @@ class CryptoEnvironment(Env):
             self.balance = self.initial_value  # Reset balance
             self.shares = 0.0  # Reset shares
 
-        if start_index is None:
-            self.current_step = np.random.randint(1 + 2*self.window_size, len(self.observations) - self.max_steps - 2*(self.window_size + 1))  # Initialize current step randomly
-        elif start_index > 1 + 2*self.window_size or start_index < len(self.observations) - self.window_size - self.max_steps:
-            raise ValueError('Initial step must be between (1 + 2*window_size, len(observations) - window_size - max_steps). \n' + 
-            'It is not advised to evaluate the model near the bounds of the observation data.')
-        else: self.current_step = start_index
         return self._get_observation()  # Return observation
 
     def step(self, action):
@@ -241,8 +244,22 @@ class CryptoEnvironment(Env):
 
         # Reset the environment for evaluation
         self.reset()
+
+        # Randomly select a subset of the data for evaluation
+        if start_index is None:
+            self.current_step = np.random.randint(1 + 2*self.window_size, len(self.observations) - self.max_steps - 2*(self.window_size + 1) - frame_length)  # Initialize current step randomly
+        elif start_index < 1 + 2*self.window_size or start_index > len(self.observations) - self.max_steps - 2*(self.window_size + 1) - frame_length:
+            raise ValueError('Initial step must be on the interval (1 + 2*window_size, len(observations) - max_steps - 2*window_size - frame_length. \n)' + 
+            'It is not advised to evaluate the model near the bounds of the observation data.')
+        else: self.current_step = start_index
+        eval_start_index = self.current_step + self.window_size
+        eval_end_index = eval_start_index + frame_length
+        eval_data = self.observations.iloc[eval_start_index:eval_end_index].reset_index(drop=True)
+
+        # Randomly assign initial position split
         t0balance = init_balance
         t0shares = init_shares
+    
         if self.random_split:
             # Initialize vals to zero so that portfolio value is calculated solely on shares value,
             # this allows us to make up the different in the balance so that portfolio value equals initial balance
@@ -260,17 +277,6 @@ class CryptoEnvironment(Env):
         t0balance = self.balance
         t0shares = self.shares
         
-
-        # Randomly select a subset of the data for evaluation
-        if start_index is None:
-            self.current_step = np.random.randint(1 + 2*self.window_size, len(self.observations) - self.max_steps - 2*(self.window_size + 1) - frame_length)  # Initialize current step randomly
-        elif start_index < 1 + 2*self.window_size or start_index > len(self.observations) - self.max_steps - 2*(self.window_size + 1) - frame_length:
-            raise ValueError('Initial step must be on the interval (1 + 2*window_size, len(observations) - max_steps - 2*window_size - frame_length. \n)' + 
-            'It is not advised to evaluate the model near the bounds of the observation data.')
-        else: self.current_step = start_index
-        eval_start_index = self.current_step + self.window_size
-        eval_end_index = eval_start_index + frame_length
-        eval_data = self.observations.iloc[eval_start_index:eval_end_index].reset_index(drop=True)
 
         fig = None
 
@@ -333,7 +339,7 @@ class CryptoEnvironment(Env):
         # Print evaluation metrics
         if verbose>0:
             print("Evaluation Metrics:  ")
-            print('Initial value:       ' + format(portfolio_vals[0]))
+            print('Initial value:       ' + format(portfolio_vals[0],'.2f'))
             print('Initial balance:     ' + format(t0balance, '.2f'))
             print('Initial shares:      ' + format(t0shares, '.2f'))
             print('Initial split:       ' + format(1-split,'.2f'))

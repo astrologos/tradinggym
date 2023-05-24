@@ -77,16 +77,21 @@ testenv = CryptoEnvironment(observations=data, initial_value = 10000,
 # Evaluate the model
 testenv.evaluate(frame_length=50, render=True, model=model, marker_size=25, verbose=1)
 ```
-![07c519cc-f91c-41bb-af8b-0b0887f5295e](https://github.com/astrologos/tradinggym/assets/82430396/83342eda-5b86-463c-b5b1-861b72d90268)
+
+![4acc439c-7742-4282-a167-9c19d234ab7c](https://github.com/astrologos/tradinggym/assets/82430396/d4917963-d8cb-4c24-b595-301d8bf876ff)
 
 Evaluation Metrics:  
-- Initial balance:     10000.00
-- Final value:         9929.66
-- Profit:              -70.34
-- Return Rate:         -0.70%
-- Cumulative reward:   0.54
-- Max reward:          1.89
-- Min reward:          -2.95
+- Initial value:       9999.00
+- Initial balance:     8728.51
+- Initial shares:      0.04
+- Initial split:       0.87
+- Final value:         10109.60
+- Profit:              110.60
+- Return Rate:         1.11%
+- Avg reward:          -0.00
+- Max reward:          0.00
+- Min reward:          -0.00
+- Cumulative reward:   -0.13
 
 ## License
 This project is licensed under the GNU General Public License v3.0. See the LICENSE file for more details.

@@ -54,8 +54,7 @@ from stable_baselines3 import PPO
 from tradinggym import CryptoEnvironment
 
 # Load the data
-data = pd.DataFrame(requests.get("https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=30")
-data = data.json()["prices"], columns=["Timestamp", "Close"])
+data = pd.read_pickle('./data/measurement.pickle')
 
 # Create the CryptoEnvironment
 environment = CryptoEnvironment(observations=data, initial_value = 10000, 
@@ -68,7 +67,7 @@ environment = DummyVecEnv([lambda: environment])
 model = PPO('MlpPolicy',env=environment)
 
 # Train the model
-model.learn(10000)
+model.learn(1000)
 
 # Create an evaluation environment
 testenv = CryptoEnvironment(observations=data, initial_value = 10000, 

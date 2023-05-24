@@ -4,7 +4,7 @@ CryptoEnvironment is a gym environment for cryptocurrency trading. It provides a
 
 ## Features
 
-- Supports discrete buying, selling, and holding actions.
+- Supports discrete buying, selling, and holding (optional) actions.
 - Customizable:
     - Initial balance
     - Random initial asset split
@@ -14,7 +14,6 @@ CryptoEnvironment is a gym environment for cryptocurrency trading. It provides a
     - Order execution fraction
     - Reward function
     - Low entropy action penalty
-    - Optional hold in action space
 - Uses any trading data including custom indicators from a provided DataFrame.
 - Provides observation and action spaces compatible with Gym.
 - Easy integration with stable-baselines3.

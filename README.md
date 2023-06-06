@@ -1,3 +1,6 @@
+[!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/ajack)
+
+
 # CryptoEnvironment
 
 CryptoEnvironment is a gym environment for cryptocurrency trading. It provides a simulation environment for training and evaluating reinforcement learning agents.
